@@ -20,7 +20,7 @@
 Run `evaluate_lora.py` with the necessary parameters to generate images:
 
 ```bash
-python3 evaluate_lora.py -l "fancy_regular" -s 4.0 -t "fancy|regular"
+ python3 lora_eval.py -l "christmas" --lora_strength -4 -2 0 2 4 -t "christmas" -url http://localhost:7777/sdapi/v1/txt2img
 ```
 
 

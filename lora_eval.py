@@ -18,7 +18,7 @@ from decimal import Decimal
 
 
 import cv2
-import ImageReward as reward
+#import ImageReward as reward
 #from datasets import load_dataset
 
 # Add a cache dictionary to store generated images and their corresponding lora values
@@ -74,16 +74,14 @@ def generate_image(prompt, negative_prompt, lora, seed=1):
         print(f"Request failed with status code {response.status_code}")
         return generate_image(prompt, negative_prompt, lora)
 
-evaluations = [
-    [3, "LORA_TRIGGER, __person__ BREAK __sdprompt__", ""],
-    [15, "LORA_TRIGGER, __person__ BREAK __sdprompt__", ""],
-]
+evaluations = json.loads(open("evaluations.json","r").read())
+
 
 def main():
     global txt2imgurl
     global folder
     parser = argparse.ArgumentParser(description='Generate images for a video between lora_start and lora_end')
-    parser.add_argument('-s', '--lora_strength', type=Decimal, required=True, help='lora strength')
+    parser.add_argument('-s', '--lora_strength', nargs='*', required=True, help='lora strength, can be multiple -2,0,2')
     parser.add_argument('-l', '--lora', type=str, required=True, help='Lora to use')
     parser.add_argument('-t', '--triggers', type=str, required=True, help='Trigger keyword - format: negative|positive')
     parser.add_argument('-url', '--text_to_image_url', type=str, default="http://localhost:3000/sdapi/v1/txt2img", help='Url for text to image')
@@ -93,19 +91,18 @@ def main():
 
     video_index = 1
     for i,t in enumerate(args.triggers.split("|")):
-        for seed, p, np in evaluations:
-            _p = p.replace("LORA_TRIGGER", t)
-            _np = np.replace("LORA_TRIGGER", t)
-            _p += "<lora:"+args.lora+":LORAVALUE>"
-            output_folder = "evaluate/"+args.lora+"/"+t
-            output_path = Path(output_folder)
-            output_path.mkdir(parents=True, exist_ok=True)
-            if i == 1:
-                target_image = generate_image(_p, _np, -args.lora_strength, seed=seed)
-            else:
-                target_image = generate_image(_p, _np, args.lora_strength, seed=seed)
-            target_image.save(os.path.join(output_folder, f"image_{seed}.png"))
-            print("Saved ", os.path.join(output_folder, f"image_{seed}.png"))
+        for lora_strength in args.lora_strength:
+            lora_strength = float(lora_strength)
+            for seed, p, np in evaluations:
+                _p = p.replace("LORA_TRIGGER", t)
+                _np = np.replace("LORA_TRIGGER", t)
+                _p += "<lora:"+args.lora+":LORAVALUE>"
+                output_folder = "evaluate/"+args.lora+"/"+t
+                output_path = Path(output_folder)
+                output_path.mkdir(parents=True, exist_ok=True)
+                target_image = generate_image(_p, _np, lora_strength, seed=seed)
+                target_image.save(os.path.join(output_folder, "{:d}_{:.1f}.png".format(seed,lora_strength)))
+                print("Saved ", os.path.join(output_folder, f"image_{seed}.png"))
 
 if __name__ == '__main__':
     main()
