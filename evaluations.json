@@ -1,5 +1,5 @@
 [
-    [17, "LORA_TRIGGER, __person__ BREAK __sdprompt__", ""],
-    [18, "LORA_TRIGGER, __person__ BREAK __sdprompt__", ""],
-    [19, "LORA_TRIGGER, __person__ BREAK LORA_TRIGGER,__sdprompt__", ""]
+    [17, "LORA_TRIGGER INSERT_LORA, __person__ BREAK INSERT_LORA __sdprompt__", "nude, naked, nsfw"],
+    [19, "LORA_TRIGGER INSERT_LORA, __person__ BREAK INSERT_LORA LORA_TRIGGER,__sdprompt__", "nude, naked, nsfw"],
+    [20, "INSERT_LORA, __person__ BREAK INSERT_LORA,__sdprompt__", "nude, naked, nsfw"]
 ]
