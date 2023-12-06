@@ -19,7 +19,7 @@ from moviepy.video.fx.all import crop
 
 
 import cv2
-import ImageReward as reward
+#import ImageReward as reward
 #from datasets import load_dataset
 from moviepy.editor import ImageSequenceClip, concatenate_videoclips, vfx
 from moviepy.video.fx import fadein, fadeout
