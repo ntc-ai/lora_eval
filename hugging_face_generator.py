@@ -180,7 +180,12 @@ loras_path = 'evaluate/loras/'
 evaluate_path = 'evaluate/'
 
 if __name__ == "__main__":
-    for lora in os.listdir(loras_path):
+    loras = os.listdir(loras_path)
+
+    # Sort files by last modified time (newest last)
+    sorted_loras = sorted(loras, key=lambda lora: os.path.getmtime(os.path.join(loras_path, lora)))
+
+    for lora in sorted_loras:
         if lora.endswith('.safetensors'):
             safetensors_path = os.path.join(loras_path, lora)
             base_filename = os.path.splitext(lora)[0]
@@ -216,4 +221,4 @@ if __name__ == "__main__":
                 private=False
             )
             print(f"Success! Repo is uploaded to {HF_NAME}{repo_name}")
-            time.sleep(900)
+            time.sleep(3600)
