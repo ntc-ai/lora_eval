@@ -56,8 +56,8 @@ def generate_image(prompt, negative_prompt, lora):
 
     data = {
         "seed": seed,
-        "width": 1024,
-        "height": 1024,
+        "width": 896,
+        "height": 1152,
         "sampler_name": "Euler a",
         "prompt": prompt_,
         "negative_prompt": nprompt_,
