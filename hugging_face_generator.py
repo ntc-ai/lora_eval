@@ -166,7 +166,10 @@ def create_repo_name(base_filename):
         repo_name = repo_name[:-4]
 
     # Enforce max length
-    repo_name = "SDXL-LoRA-slider."+"".join(repo_name.split(".")[:-1])
+    if "." in repo_name:
+        repo_name = "SDXL-LoRA-slider."+"".join(repo_name.split(".")[:-1])
+    else:
+        repo_name = "SDXL-LoRA-slider."+repo_name
     max_length = 96
     if len(repo_name) > max_length:
         repo_name = repo_name[:max_length]
