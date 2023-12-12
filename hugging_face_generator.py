@@ -221,4 +221,4 @@ if __name__ == "__main__":
                 private=False
             )
             print(f"Success! Repo is uploaded to {HF_NAME}{repo_name}")
-            time.sleep(3600)
+            time.sleep(60*60*3)
