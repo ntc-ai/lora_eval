@@ -347,6 +347,7 @@ def main():
             os.unlink(os.path.join(folder, filename))
 
     labels = args.label.split(",")
+    labels = [labels[0], ",".join(labels[1:])]
     print("LABELS", labels)
     prompt = args.prompt
     if prompt is None:
@@ -416,12 +417,31 @@ from moviepy.editor import ImageClip, concatenate_videoclips, CompositeVideoClip
 import numpy as np
 
 
-def add_text_to_image(image_path, text, position, fontsize=70):
-    """ Adds text to an image and returns an ImageClip. """
-    txt_clip = TextClip(text, fontsize=fontsize, color='white', font='Arial-Bold')
+def add_text_to_image(image_path, text, position, max_fontsize=70):
     img_clip = ImageClip(image_path)
+
+    # Initial font size
+    fontsize = max_fontsize
+    text_fits = False
+
+    while not text_fits and fontsize > 0:
+        # Create text clip with current font size
+        txt_clip = TextClip(text, fontsize=fontsize, color='white', font='Arial-Bold')
+
+        # Check if text size is smaller than image size
+        if txt_clip.size[0] <= img_clip.size[0] and txt_clip.size[1] <= img_clip.size[1]:
+            text_fits = True
+        else:
+            fontsize -= 1  # Decrease font size and try again
+
+    if fontsize == 0:
+        raise ValueError("Text cannot fit into the image.")
+
+    # Set the position and duration of the text clip
     txt_clip = txt_clip.set_position(position).set_duration(img_clip.duration)
+
     return CompositeVideoClip([img_clip, txt_clip])
+
 
 def create_transition_clip(first_frame, last_frame, duration, fps):
     """ Creates a transition clip with a left-to-right slider effect, a moving white line, and text that transitions with the slider. """
