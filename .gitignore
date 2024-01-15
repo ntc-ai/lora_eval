@@ -1,0 +1,11 @@
+combo_eval*/
+*.list
+anim*/
+v5/
+wildcards
+*.patch
+evaluate/
+combo_loras
+loras/
+repos/
+__pycache__/
