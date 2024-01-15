@@ -68,7 +68,7 @@ def sample_seed(loras, seed, prompt, uuid, savedir, model, lambda_val, p_val, st
         lorain['model_str_'+str(i+1)]=1
         lorain['clip_str_'+str(i+1)]=1
         if i < len(loras):
-            lorain['lora_name_'+str(i+1)]="Lora/sdxl/sliders/mlq/"+loras[i]
+            lorain['lora_name_'+str(i+1)]="Lora/ntc-sdxl-sliders/"+loras[i]
             lorainlist += ["Lora/ntc-sdxl-sliders/"+loras[i], 1, 1, 1]
             loralength+=1
         else:
