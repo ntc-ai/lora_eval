@@ -229,6 +229,45 @@ def smooth(images, threshold=0.1, similarity_threshold=0.05):
 
     return smooth_images
 
+def find_images2(prompt, negative_prompt, lora_start, lora_end, steps, max_compare=1000, tolerance=2e-13, max_budget=120):
+    def interpolate_based_on_largest_diff(initial_times, num_frames):
+        frames = [(time, generate_image(prompt, negative_prompt, time)) for time in initial_times]
+
+        while len(frames) < num_frames:
+            max_diff = 0
+            max_index = 0
+
+            # Find the pair of consecutive frames with the largest difference
+            for i in range(len(frames) - 1):
+                diff = optical_flow(frames[i][1], frames[i + 1][1])
+                if diff > max_diff:
+                    max_diff = diff
+                    max_index = i
+
+            # Determine the time point exactly between the pair with the largest difference
+            new_time = (frames[max_index][0] + frames[max_index + 1][0]) / 2
+            new_frame = generate_image(prompt, negative_prompt, new_time)
+            print("Inserting",frames[max_index][0], " -> ", new_time, " -> ", frames[max_index+1][0], "at idx", max_index)
+
+            # Insert the new frame into the sorted list
+            frames.insert(max_index + 1, (new_time, new_frame))
+        for image_idx in range(len(frames)):
+            frames[image_idx][1].save(os.path.join(folder, f"image_{image_idx:04d}.png"))
+
+        print([frame[0] for frame in frames])
+
+        # Return only the frame values, excluding the time points
+        return [frame[1] for frame in frames]
+
+    # Initial key times and total number of frames
+    initial_times = [lora_start, (lora_end+lora_start)/2, lora_end]
+    num_frames = max_budget
+
+    # Interpolate frames based on the largest difference at each step
+    final_frames = interpolate_based_on_largest_diff(initial_times, num_frames)
+
+    # Test the implementation and print the final frames
+    return final_frames
 
 def find_images(prompt, negative_prompt, lora_start, lora_end, steps, max_compare=1000, tolerance=2e-13, max_budget=120):
     images = []
@@ -294,14 +333,18 @@ def find_best_seed(prompt, negative_prompt, num_seeds=10, steps=2, max_compare=2
 
         # Generate images with steps=2 and max_compare=-0.0
         generated_images = find_images(prompt, negative_prompt, lora_start, lora_end, steps, max_compare)
+        #generated_images = find_images2(prompt, negative_prompt, lora_start, lora_end, steps, max_compare)
 
         # Score the images and sum the scores
-        score1 = score_image(prompt, folder + "/image_0000.png")
-        score2 = score_image(prompt, folder + "/image_0001.png")*3
-        c = -compare(generated_images[0], generated_images[1])/8.0
+        #score1 = score_image(prompt, folder + "/image_0000.png")
+        #score2 = score_image(prompt, folder + "/image_0001.png")*3
+        #c = -compare(generated_images[0], generated_images[1])/8.0
         #c = calculate_ssim(generated_images[0], generated_images[1])*2
-        total_score = score1 + score2 + c
-        print("Score 1:", score1, "Score 2", score2, "Comparison", c, "total score", total_score)
+        #total_score = score1 + score2 + c
+        change = compare( generated_images[0], generated_images[1])
+        total_score = - change
+        #print("Score 1:", score1, "Score 2", score2, "Comparison", c, "total score", total_score)
+        print("Change", change)
 
         # Print the scores for debugging
         #print(f"Seed: {_}, Score1: {score1}, Score2: {score2}, Total: {total_score}")
@@ -310,8 +353,8 @@ def find_best_seed(prompt, negative_prompt, num_seeds=10, steps=2, max_compare=2
         if total_score > best_score:
             best_seed = seed
             best_score = total_score
-            bscore1 = score1
-            bscore2 = score2
+            bscore1 = None#score1
+            bscore2 = None#score2
 
     return best_seed, best_score, bscore1, bscore2
 
@@ -321,7 +364,7 @@ def main():
     parser = argparse.ArgumentParser(description='Generate images for a video between lora_start and lora_end')
     parser.add_argument('-s', '--lora_start', type=Decimal, required=True, help='Start lora value')
     parser.add_argument('-e', '--lora_end', type=Decimal, required=True, help='End lora value')
-    parser.add_argument('-m', '--max_compare', type=float, default=1000.0, help='Maximum mean squared error (default: 1000)')
+    parser.add_argument('-m', '--max_compare', type=float, default=-1, help='Maximum mean squared error (default: auto)')
     parser.add_argument('-n', '--steps', type=int, default=32, help='Min frames in output animation')
     parser.add_argument('-sd', '--num_seeds', type=int, default=10, help='number of seeds to search')
     parser.add_argument('-b', '--budget', type=int, default=120, help='budget of image frames')
@@ -364,11 +407,16 @@ def main():
     # Find the best seed
     best_seed, best_score, score1, score2 = find_best_seed(prompt, negative_prompt, num_seeds=args.num_seeds, steps=2, max_compare=1000, lora_start=args.lora_start, lora_end=args.lora_end)
     print(f"Best seed: {best_seed}, Best score: {best_score}")
+    max_compare = args.max_compare
+    if max_compare < 0:
+        max_compare = -best_score / args.budget * 29
+        print("Guessing max delta: ", max_compare, " estimated frames: ", args.budget)
+
 
     # Now generate images with the best seed, compare=-0.77, and steps=32
     global seed
     seed = best_seed  # Set the best seed as the current seed
-    images = find_images(prompt, negative_prompt, args.lora_start, args.lora_end, args.steps, args.max_compare, args.tolerance, args.budget)
+    images = find_images2(prompt, negative_prompt, args.lora_start, args.lora_end, args.steps, max_compare, args.tolerance, args.budget)
     #print("Smoothing frames. This may take a while (deleting repeat sequences")
     #generated_images = smooth(images)
     #print("Before smoothing:", len(images), "frames after:", len(generated_images), "frames")
