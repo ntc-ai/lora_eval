@@ -12,11 +12,13 @@ HF_NAME="ntc-ai/"
 def count_files(directory):
     return len([name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))])
 
-def readme(slider_file, repo_name, slider_name, png_paths, repo_file, adapter_name, trigger_words, sliders_count, slider_details):
+def readme(slider_file, repo_name, slider_name, png_paths, repo_file, adapter_name, trigger_words, sliders_count, slider_details, merge_count=0, sliders_url=None):
     base_model_repo = "https://huggingface.co/martyn/sdxl-turbo-mario-merge-top-rated"
     patreon_link = "https://www.patreon.com/NTCAI"
     widget_list = "\n".join([f'- text: {trigger_words}\n  output:\n    url: images/'+os.path.basename(png_path) for i, png_path in enumerate(png_paths)])
     pre_post_images = "| Strength: -3 | Strength: 0 | Strength: 3 |\n| --- | --- | --- |\n"
+    img_path = os.path.splitext(os.path.basename(png_paths[0]))[0].split("_3.")[0]
+    thumbnail_path = f"images/{img_path}_3.0.png"
     for png_path in png_paths[:3]:
         img_path = os.path.splitext(os.path.basename(png_path))[0].split("_3.")[0]
         pre_post_images += "| "
@@ -30,7 +32,7 @@ def readme(slider_file, repo_name, slider_name, png_paths, repo_file, adapter_na
 ---
 language: 
 - en
-thumbnail: "images/{png_paths[0]}"
+thumbnail: "{thumbnail_path}"
 widget:
 {widget_list}
 tags:
@@ -51,6 +53,7 @@ base_model: "stabilityai/stable-diffusion-xl-base-1.0"
 # ntcai.xyz slider - {trigger_words} (SDXL LoRA)
 
 {pre_post_images}
+See more at [{sliders_url}]({sliders_url})
 
 ## Download
 
@@ -95,9 +98,9 @@ image.save('result.png')
 
 If you like this model please consider [joining our Patreon]({patreon_link}).
 
-By joining our Patreon, you'll gain access to an ever-growing library of over {sliders_count}+ unique and diverse LoRAs, covering a wide range of styles and genres. You'll also receive early access to new models and updates, exclusive behind-the-scenes content, and the powerful LoRA slider creator, allowing you to craft your own custom LoRAs and experiment with endless possibilities.
+By joining our Patreon, you'll gain access to an ever-growing library of over {sliders_count}+ unique and diverse LoRAs along with {merge_count}+ slider merges, covering a wide range of styles and genres. You'll also receive early access to new models and updates, exclusive behind-the-scenes content, and the powerful <strong>NTC Slider Factory</strong> LoRA creator, allowing you to craft your own custom LoRAs and merges opening up endless possibilities.
 
-Your support on Patreon will allow us to continue developing and refining new models.
+Your support on Patreon will allow us to continue developing new models and tools.
 
 ## Other resources
 

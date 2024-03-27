@@ -1,0 +1,4 @@
+include README.md
+recursive-include lora_eval *.py
+recursive-exclude tests *
+global-exclude *.png *.mp4 *.gif *.avi

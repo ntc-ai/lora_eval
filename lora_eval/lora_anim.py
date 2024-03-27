@@ -62,7 +62,7 @@ def generate_image(prompt, negative_prompt, lora):
         "prompt": prompt_,
         "negative_prompt": nprompt_,
         "cfg_scale": 1.0,
-        "steps": 14
+        "steps": 8
     }
     print(" calling: ", prompt_)
 
@@ -229,7 +229,7 @@ def smooth(images, threshold=0.1, similarity_threshold=0.05):
 
     return smooth_images
 
-def find_images2(prompt, negative_prompt, lora_start, lora_end, steps, max_compare=1000, tolerance=2e-13, max_budget=120):
+def find_images2(prompt, negative_prompt, lora_start, lora_end, max_compare=1000, tolerance=2e-13, max_budget=120):
     def interpolate_based_on_largest_diff(initial_times, num_frames):
         frames = [(time, generate_image(prompt, negative_prompt, time)) for time in initial_times]
 
@@ -317,7 +317,7 @@ def find_images(prompt, negative_prompt, lora_start, lora_end, steps, max_compar
 
     return images
 
-def find_best_seed(prompt, negative_prompt, num_seeds=10, steps=2, max_compare=20.0, lora_start=0.0, lora_end=1.0):
+def find_best_seed(prompt, negative_prompt, num_seeds=10, max_compare=20.0, lora_start=0.0, lora_end=1.0):
     global seed
     global image_cache
     best_seed = None
@@ -332,7 +332,7 @@ def find_best_seed(prompt, negative_prompt, num_seeds=10, steps=2, max_compare=2
         image_cache = {}
 
         # Generate images with steps=2 and max_compare=-0.0
-        generated_images = find_images(prompt, negative_prompt, lora_start, lora_end, steps, max_compare)
+        generated_images = find_images(prompt, negative_prompt, lora_start, lora_end, 2, max_compare)
         #generated_images = find_images2(prompt, negative_prompt, lora_start, lora_end, steps, max_compare)
 
         # Score the images and sum the scores
@@ -343,6 +343,9 @@ def find_best_seed(prompt, negative_prompt, num_seeds=10, steps=2, max_compare=2
         #total_score = score1 + score2 + c
         change = compare( generated_images[0], generated_images[1])
         total_score = - change
+        if change == 0.0:
+            print("Failure detected. LoRA not found.")
+            exit(-1)
         #print("Score 1:", score1, "Score 2", score2, "Comparison", c, "total score", total_score)
         print("Change", change)
 
@@ -357,6 +360,74 @@ def find_best_seed(prompt, negative_prompt, num_seeds=10, steps=2, max_compare=2
             bscore2 = None#score2
 
     return best_seed, best_score, bscore1, bscore2
+
+
+
+def create_video(prompt, negative_prompt, lora_start, lora_end, max_compare=1000, tolerance=2e-13, max_budget=120, num_seeds=10, working_dir="anim", output_dir="v5", labels=["", ""], loop=False, reverse=False, negative_lora=False, lora="", lora_prompt="", prompt_addendum="", text_to_image_url="http://localhost:3000/sdapi/v1/txt2img"):
+    global txt2imgurl
+    global folder
+    txt2imgurl = text_to_image_url
+    folder = working_dir
+    os.makedirs(folder, exist_ok=True)
+    for filename in os.listdir(folder):
+        if filename.endswith(".png"):
+            os.unlink(os.path.join(folder, filename))
+    labels = [labels[0], "|".join(labels[1:])]
+    print("LABELS", labels)
+    lora_prompt = ""
+    if not negative_lora:
+        lora_prompt += "<lora:" + lora + ":LORAVALUE>"
+    else:
+        negative_prompt += "<lora:" + lora + ":LORAVALUE>"
+    lora_prompt += prompt_addendum
+    prompt = (prompt + ' ' + lora_prompt).strip()
+    print("PROMPT IS ", prompt, "LOR", lora_prompt)
+    # Find the best seed
+    best_seed, best_score, score1, score2 = find_best_seed(prompt, negative_prompt, num_seeds=num_seeds, max_compare=1000, lora_start=lora_start, lora_end=lora_end)
+    print(f"Best seed: {best_seed}, Best score: {best_score}")
+    max_compare = max_compare
+    if max_compare < 0:
+        max_compare = -best_score / max_budget * 29
+        print("Guessing max delta: ", max_compare, " estimated frames: ", max_budget)
+    # Now generate images with the best seed, compare=-0.77, and steps=32
+    global seed
+    seed = best_seed  # Set the best seed as the current seed
+    images = find_images2(prompt, negative_prompt, lora_start, lora_end, max_compare, tolerance, max_budget)
+    generated_images = list(images)
+    if reverse:
+        generated_images = list(reversed(generated_images))
+    if reverse or len(images) != len(generated_images):
+        for filename in os.listdir(folder):
+            if filename.endswith(".png"):
+                os.unlink(os.path.join(folder, filename))
+        for i, image in enumerate(generated_images):
+            image.save(os.path.join(folder, f"image_{i+1:04d}.png"))
+    # Create an animated movie
+    fps = len(generated_images) // 2
+    if fps == 0:
+        fps = 1
+    print("Generated", len(generated_images), "fps", fps)
+    # Save details to a JSON file
+    details = {
+        "seed": best_seed,
+        "prompt": prompt,
+        "negative_prompt": negative_prompt,
+        "prompt_addendum": prompt_addendum,
+        "lora": lora,
+        "lora_prompt": lora_prompt,
+        "lora_start": float(lora_start),
+        "lora_end": float(lora_end),
+        "score1": score1,
+        "score2": score2,
+        "best_score": best_score
+    }
+    os.makedirs(output_dir, exist_ok=True)
+    video_index = 1
+    while os.path.exists(f"{output_dir}/{video_index}.mp4"):
+        video_index += 1
+    with open(f"{output_dir}/{video_index}.json", "w") as f:
+        json.dump(details, f)
+    create_animated_movie(folder, output_dir, video_index, fps=fps, loop=loop, labels=labels)
 
 def main():
     global txt2imgurl
@@ -389,8 +460,8 @@ def main():
         if filename.endswith(".png"):
             os.unlink(os.path.join(folder, filename))
 
-    labels = args.label.split(",")
-    labels = [labels[0], ",".join(labels[1:])]
+    labels = args.label.split("|")
+    labels = [labels[0], "|".join(labels[1:])]
     print("LABELS", labels)
     prompt = args.prompt
     if prompt is None:
