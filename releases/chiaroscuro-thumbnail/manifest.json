@@ -1,0 +1,11 @@
+{
+  "target": "ntc-ai/SDXL-LoRA-slider.Chiaroscuro",
+  "parent": "115d4a4811f060bb4f26ee7760e011e4bb8b5a2a",
+  "files": [
+    {
+      "source": "README.md",
+      "path": "README.md",
+      "sha256": "53a5bda3617bab1159feb27e93c9babc3bedbd119b2a4bb8cda50bfcb7637bcb"
+    }
+  ]
+}

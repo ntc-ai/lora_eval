@@ -1,0 +1,61 @@
+name: Publish approved SDXL slider changes
+
+on:
+  pull_request:
+    paths:
+      - 'releases/**'
+      - 'publish_sdxl.py'
+      - 'test_publish_sdxl.py'
+      - '.github/workflows/sdxl-release.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'releases/**'
+      - 'publish_sdxl.py'
+      - 'test_publish_sdxl.py'
+      - '.github/workflows/sdxl-release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'huggingface_hub==1.19.0'
+      - run: python -m unittest -v test_publish_sdxl
+      - name: Plan changed artifacts with public read access
+        env:
+          BEFORE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: python publish_sdxl.py --changed-from "$BEFORE"
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'ntc-ai/lora_eval'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: sdxl-model-publish
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'huggingface_hub==1.19.0'
+      - name: Publish the tested files against their reviewed parent commits
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: python publish_sdxl.py --changed-from "$BEFORE" --apply
